@@ -1,0 +1,48 @@
+version: "3.8"
+
+# OPENMRS_DISTRO=openmrs-reference-application-distro|openmrs-distro-platform
+# OPENMRS_DISTRO_VERSION=Docker Hub version tag
+
+services:
+  db:
+    image: mysql:5.6
+    environment:
+      - MYSQL_ROOT_PASSWORD=openmrs
+      - MYSQL_USER=${DB_USERNAME-openmrs}
+      - MYSQL_PASSWORD=${DB_PASSWORD-openmrs}
+      - MYSQL_DATABASE=openmrs
+    command: "mysqld --character-set-server=utf8 --collation-server=utf8_general_ci"
+
+  openmrs:
+    image: openmrs/${OPENMRS_DISTRO-openmrs-reference-application-distro}:${OPENMRS_DISTRO_VERSION-2.10.0}
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_USERNAME=${DB_USERNAME-openmrs}
+      - DB_PASSWORD=${DB_PASSWORD-openmrs}
+      - DB_DATABASE=openmrs
+      - DB_CREATE_TABLES=true
+      - DB_AUTO_UPDATE=true
+      - MODULE_WEB_ADMIN=false
+      - DEBUG=false
+    ports:
+      - 8080:8080
+
+  dbtojson:
+    image: groovy:3.0-jre8
+    depends_on:
+      - db
+      - openmrs
+    environment:
+      - OPENMRS_DISTRO=${OPENMRS_DISTRO-openmrs-reference-application-distro}
+      - OPENMRS_DISTRO_VERSION=${OPENMRS_DISTRO_VERSION-2.10.0}
+      - OPENMRS_USERNAME=${OPENMRS_USERNAME-admin}
+      - OPENMRS_PASSWORD=${OPENMRS_PASSWORD-Admin123}
+      - DB_URL=jdbc:mysql://db/openmrs
+      - DB_USERNAME=${DB_USERNAME-openmrs}
+      - DB_PASSWORD=${DB_PASSWORD-openmrs}
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: "./DbToJson.groovy"
